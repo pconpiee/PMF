@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMF Lab — Product-Market Fit Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&family=Figtree:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+  SPLASH — Scenario Selection
+══════════════════════════════════════════ -->
+<div id="splash">
+  <div class="splash-eyebrow">Masters Series · Entrepreneurship Lab</div>
+  <h1 class="splash-title">PMF <em>Lab</em></h1>
+  <p class="splash-sub">Navigate the hardest problem in startups: finding product-market fit before the runway runs out. Make real decisions. Face real consequences. Learn by doing.</p>
+  <div class="scenario-grid" id="scenario-grid"></div>
+  <div class="launch-row">
+    <button class="launch-btn" id="launch-btn" disabled onclick="startGame()">Begin Simulation →</button>
+    <span class="launch-note">Select a scenario above to continue</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  HYPOTHESIS GATE — Before every action
+══════════════════════════════════════════ -->
+<div id="hypothesis-gate">
+  <div class="hyp-gate-card">
+    <div class="hyp-gate-eyebrow">Before You Act</div>
+    <div class="hyp-gate-title">State Your Hypothesis</div>
+    <div class="hyp-gate-action-name" id="hg-action-desc"></div>
+    <div class="hyp-gate-prompt">Why are you choosing this action?</div>
+    <div class="hyp-gate-prefix">I am choosing this because I believe...</div>
+    <textarea
+      class="hyp-gate-input"
+      id="hg-input"
+      placeholder="e.g. the telehealth segment has higher urgency because documentation costs compound faster at scale, and they have dedicated ops budgets rather than clinical budgets..."
+    ></textarea>
+    <div class="hyp-gate-note">
+      This prediction will appear in your debrief — comparing what you believed against what the market showed.
+      Even a rough answer is more valuable than none.
+      This is the most important step in the simulation.
+    </div>
+    <div class="hyp-gate-btns">
+      <button class="hyp-gate-skip" onclick="confirmAction(true)">Skip for now</button>
+      <button class="hyp-gate-go" onclick="confirmAction(false)">Execute Action →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  MAIN GAME APP
+══════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-logo">PMF <span>Lab</span></div>
+    <div class="topbar-scenario" id="top-scenario"></div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-resource">
+      <span class="topbar-resource-label">BUDGET</span>
+      <span class="topbar-resource-val" id="top-budget">—</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="topbar-resource">
+      <span class="topbar-resource-label">DAYS LEFT</span>
+      <span class="topbar-resource-val" id="top-days">—</span>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="runway-bar-wrap">
+      <div class="runway-bar" id="runway-bar" style="width:100%"></div>
+    </div>
+  </header>
+
+  <div class="game-layout">
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar-left">
+
+      <!-- PMF Meter -->
+      <div class="pmf-meter-wrap">
+        <div class="pmf-meter-top">
+          <div class="pmf-big" id="pmf-big">0%</div>
+          <div class="pmf-phase-name" id="pmf-phase-name">Discovery</div>
+        </div>
+        <div class="pmf-bar-track">
+          <div class="pmf-bar-fill" id="pmf-bar-fill" style="width:0%"></div>
+        </div>
+        <div class="pmf-stages">
+          <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100</span>
+        </div>
+      </div>
+
+      <!-- Market Segments -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">Market Segments</div>
+        <div id="segments-list"></div>
+      </div>
+
+      <!-- Hypothesis Tracker -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">Hypothesis Tracker</div>
+        <div id="hypothesis-list"></div>
+      </div>
+
+    </aside>
+
+    <!-- Main Panel -->
+    <main class="main-panel">
+
+      <!-- Phase Context Card -->
+      <div class="context-card">
+        <div class="context-eyebrow" id="ctx-eyebrow">CURRENT PHASE</div>
+        <div class="context-phase" id="ctx-phase">Discovery</div>
+        <div class="context-body" id="ctx-body"></div>
+        <div class="context-pips" id="ctx-pips"></div>
+      </div>
+
+      <!-- Decision Sequence -->
+      <div class="move-log">
+        <div class="move-log-label">Decision Sequence</div>
+        <div class="move-log-items" id="move-chips"></div>
+      </div>
+
+      <!-- Action Selection -->
+      <div class="actions-header">
+        <div class="actions-title">Choose Your Next Move</div>
+        <div class="actions-subtitle" id="actions-subtitle"></div>
+      </div>
+
+      <div class="type-tabs">
+        <button class="type-tab active-all"  onclick="filterActions('all',this)">All</button>
+        <button class="type-tab" onclick="filterActions('research',this)">Research</button>
+        <button class="type-tab" onclick="filterActions('product',this)">Product</button>
+        <button class="type-tab" onclick="filterActions('channel',this)">Channel</button>
+        <button class="type-tab" onclick="filterActions('pivot',this)">Pivot</button>
+      </div>
+
+      <div class="action-grid" id="action-grid"></div>
+
+    </main>
+
+    <!-- Right Sidebar -->
+    <aside class="sidebar-right">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Live Metrics</div>
+        <div id="metrics-list"></div>
+      </div>
+
+      <div class="sidebar-section" style="margin-top:1.5rem">
+        <div class="sidebar-label">Activity Log</div>
+        <div id="activity-feed"></div>
+      </div>
+
+    </aside>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  OUTCOME MODAL — After every action
+══════════════════════════════════════════ -->
+<div id="outcome-modal">
+  <div class="outcome-card">
+
+    <div class="outcome-header">
+      <div class="outcome-type-row">
+        <span class="outcome-action-tag" id="om-type-tag"></span>
+        <span class="outcome-arrow">→</span>
+        <span class="outcome-action-name" id="om-action-name"></span>
+      </div>
+      <div class="outcome-icon" id="om-icon"></div>
+      <div class="outcome-title" id="om-title"></div>
+    </div>
+
+    <div class="outcome-body-section">
+      <div class="outcome-body" id="om-body"></div>
+    </div>
+
+    <div id="om-prediction-section" class="hyp-prediction-section" style="display:none">
+      <div class="hyp-pred-label">Your Prediction</div>
+      <div class="hyp-pred-text" id="om-prediction-text"></div>
+    </div>
+
+    <div class="outcome-stats" id="om-stats"></div>
+
+    <div class="outcome-learning">
+      <div class="learning-eyebrow">PMF Principle</div>
+      <div class="learning-text" id="om-learning"></div>
+    </div>
+
+    <div class="outcome-footer">
+      <div class="outcome-progress" id="om-progress"></div>
+      <button class="continue-btn" onclick="closeOutcome()">Continue →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  DEBRIEF SCREEN — End of run
+══════════════════════════════════════════ -->
+<div id="debrief-screen">
+  <div class="debrief-wrap">
+
+    <!-- Grade -->
+    <div class="debrief-grade-block">
+      <div class="debrief-grade" id="db-grade"></div>
+      <div class="debrief-grade-label" id="db-grade-label"></div>
+      <div class="debrief-grade-title" id="db-title"></div>
+      <div class="debrief-grade-desc" id="db-desc"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="debrief-stats" id="db-stats"></div>
+
+    <!-- 01 / GATHER -->
+    <div class="debrief-section">
+      <div class="gas-label">
+        <span class="gas-num">01 / GATHER</span>
+        <span class="gas-title">Your Decision Timeline</span>
+      </div>
+      <div class="gas-desc">
+        Every action you took, in sequence. The market's response.
+        Your predictions, where you made them.
+      </div>
+      <div class="decision-timeline" id="db-timeline"></div>
+    </div>
+
+    <!-- 02 / ANALYSE -->
+    <div class="debrief-section">
+      <div class="gas-label">
+        <span class="gas-num">02 / ANALYSE</span>
+        <span class="gas-title">Hypothesis Autopsy</span>
+      </div>
+      <div class="gas-desc">
+        Which assumptions held? Which were wrong?
+        What does the gap between your predictions and the market tell you?
+      </div>
+      <div id="db-hypothesis-analysis"></div>
+      <div class="expert-debrief">
+        <div class="expert-eyebrow">Expert Analysis</div>
+        <div class="expert-body" id="db-expert"></div>
+      </div>
+    </div>
+
+    <!-- 03 / SUMMARISE -->
+    <div class="debrief-section">
+      <div class="gas-label">
+        <span class="gas-num">03 / SUMMARISE</span>
+        <span class="gas-title">Perspective Shift</span>
+      </div>
+      <div class="perspective-section">
+        <div class="perspective-prompt">
+          Complete this sentence to consolidate what changed in your thinking:<br><br>
+          <em>The most important thing I now believe about PMF that I did not believe before this run is:</em>
+        </div>
+        <textarea
+          class="perspective-input"
+          id="db-perspective-input"
+          placeholder="Write your answer here. Even a rough draft consolidates the learning — the act of articulating it is the mechanism."
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="debrief-actions">
+      <button class="debrief-replay-btn" onclick="replayScenario()">↩ Replay This Scenario</button>
+      <button class="debrief-new-btn" onclick="location.reload()">Choose New Scenario</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  SCRIPTS — Order matters
+══════════════════════════════════════════ -->
+
+<!-- Data layer -->
+<script src="data/scenarios.js"></script>
+<script src="data/actions.js"></script>
+
+<!-- Engine -->
+<script src="engine/state.js"></script>
+<script src="engine/render.js"></script>
+<script src="engine/logic.js"></script>
+
+<!-- Components -->
+<script src="components/debrief.js"></script>
+
+<!-- Boot -->
+<script>
+  // Initialise scenario selection cards on load
+  initSplash();
+</script>
+
+</body>
+</html>
+```
+
+---
+
+Commit message: `feat: index.html — app shell, all screens, script loading order`
+
+---
+
+**That's all 7 files.** Your repo should now look like:
+```
+PMF/
+├── README.md
+├── index.html
+├── styles/
+│   └── main.css
+├── data/
+│   ├── scenarios.js
+│   └── actions.js
+├── engine/
+│   ├── state.js
+│   ├── render.js
+│   └── logic.js
+└── components/
+    └── debrief.js
